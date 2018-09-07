@@ -8,43 +8,63 @@
 #
 
 library(shiny)
+library(reshape2)
+library(dplyr)
+library(plotly)
+library(shinythemes)
+library(stringr)
+
+iris.load<- iris %>%
+  mutate(Sepal.Length = as.numeric(Sepal.Length),
+         Sepal.Width = as.numeric(Sepal.Width),
+         Petal.Length = as.numeric(Petal.Length),
+         Petal.Width = as.numeric(Petal.Width),
+         name = as.factor(Species))
+
+pdf(NULL)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-   
-   # Application title
-   titlePanel("Old Faithful Geyser Data"),
-   
-   # Sidebar with a slider input for number of bins 
-   sidebarLayout(
-      sidebarPanel(
-         sliderInput("bins",
-                     "Number of bins:",
-                     min = 1,
-                     max = 50,
-                     value = 30)
-      ),
-      
-      # Show a plot of the generated distribution
-      mainPanel(
-         plotOutput("distPlot")
-      )
-   )
+  navbarPage("Iris NavBar", 
+             theme = shinytheme("united"),
+             tabPanel("Plot",
+                      sidebarLayout(
+                        sidebarPanel(
+                          selectInput("species_select",
+                                      "Species:",
+                                      choices = levels(iris$Species),
+                                      multiple = TRUE,
+                                      selectize = TRUE,
+                                      selected = c("setosa", "versicolor","virginica")),
+                          sliderInput("Petal.length_select",
+                                      "Petal length:",
+                                      min = min(iris.load$Petal.Length, na.rm = T),
+                                      max = max(iris.load$Petal.Length, na.rm = T),
+                                      value = c(min(iris.load$Petal.Length, na.rm = T), max(iris.load$Petal.Length, na.rm = T)),
+                                      step = 1)
+                        ),
+                        # Output plot
+                        mainPanel(
+                          plotlyOutput("plot")
+                        )
+                      )
+             ),
+             # Data Table
+             tabPanel("Table",
+                      fluidPage(DT::dataTableOutput("table"))
+             )
+  )
 )
-
-# Define server logic required to draw a histogram
+# Define server logic
 server <- function(input, output) {
-   
-   output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      x    <- faithful[, 2] 
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
-      
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
-   })
+  output$plot <- renderPlotly({
+    dat <- subset(iris.load, Species %in% input$species_select)
+    ggplot(data = dat, aes(x = Species, y = Petal.Length, fill = Species)) + geom_bar(stat = "identity")
+  })
+  output$table <- DT::renderDataTable({
+    subset(iris, Species %in% input$species_select, select = c(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species))
+  })
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
