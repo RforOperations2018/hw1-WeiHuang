@@ -58,6 +58,7 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   output$plot <- renderPlotly({
+    # In the future you should wrap this around an if statement incase the user selects no Species!
     dat <- subset(iris.load, Species %in% input$species_select)
     ggplot(data = dat, aes(x = Species, y = Petal.Length, fill = Species)) + geom_bar(stat = "identity")
   })
